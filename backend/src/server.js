@@ -8,6 +8,7 @@ const testRoutes = require("./routes/test.routes");
 
 const workspaceRoutes = require("./routes/workspace.routes");
 
+const projectRoutes = require("./routes/project.routes");
 
 dotenv.config();
 
@@ -28,6 +29,7 @@ app.get("/health", (req, res) => {
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/workspaces", workspaceRoutes);
+app.use("/api/projects", projectRoutes);
 
 const PORT = process.env.PORT || 5000;
 
