@@ -6,6 +6,9 @@ const helmet = require("helmet");
 const authRoutes = require("./routes/auth.routes");
 const testRoutes = require("./routes/test.routes");
 
+const workspaceRoutes = require("./routes/workspace.routes");
+
+
 dotenv.config();
 
 const app = express();
@@ -24,6 +27,7 @@ app.get("/health", (req, res) => {
 
 app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
+app.use("/api/workspaces", workspaceRoutes);
 
 const PORT = process.env.PORT || 5000;
 
