@@ -10,6 +10,8 @@ const workspaceRoutes = require("./routes/workspace.routes");
 
 const projectRoutes = require("./routes/project.routes");
 
+const taskRoutes = require("./routes/task.routes");
+
 dotenv.config();
 
 const app = express();
@@ -30,6 +32,7 @@ app.use("/api/auth", authRoutes);
 app.use("/api/test", testRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/projects", projectRoutes);
+app.use("/api/tasks", taskRoutes);
 
 const PORT = process.env.PORT || 5000;
 
