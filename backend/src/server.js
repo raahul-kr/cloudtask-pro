@@ -12,6 +12,10 @@ const projectRoutes = require("./routes/project.routes");
 
 const taskRoutes = require("./routes/task.routes");
 
+const subtaskRoutes = require("./routes/subtask.routes");
+
+const commentRoutes = require("./routes/comment.routes");
+
 dotenv.config();
 
 const app = express();
@@ -33,6 +37,8 @@ app.use("/api/test", testRoutes);
 app.use("/api/workspaces", workspaceRoutes);
 app.use("/api/projects", projectRoutes);
 app.use("/api/tasks", taskRoutes);
+app.use("/api/subtasks", subtaskRoutes);
+app.use("/api/comments", commentRoutes);
 
 const PORT = process.env.PORT || 5000;
 
