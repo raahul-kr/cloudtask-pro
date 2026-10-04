@@ -5,9 +5,9 @@ services:
     container_name: cloudtask-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: cloudtask
-      POSTGRES_PASSWORD: cloudtask_dev
-      POSTGRES_DB: cloudtask
+      POSTGRES_USER: ${POSTGRES_USER:-cloudtask}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cloudtask_dev}
+      POSTGRES_DB: ${POSTGRES_DB:-cloudtask}
     ports:
       - "5432:5432"
     volumes:

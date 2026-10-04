@@ -1,5 +1,6 @@
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const crypto = require("crypto");
 
 const ACCESS_SECRET = process.env.JWT_ACCESS_SECRET;
 const REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
@@ -30,7 +31,7 @@ function generateAccessToken(userId) {
 // Create long-lived refresh token
 function generateRefreshToken(userId) {
   return jwt.sign(
-    { userId },
+    { userId, tokenId: crypto.randomUUID() },
     REFRESH_SECRET,
     { expiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d" }
   );
