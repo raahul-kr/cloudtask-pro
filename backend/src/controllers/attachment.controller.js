@@ -16,6 +16,9 @@ async function findAccessibleTask(taskId, userId) {
 }
 
 async function createAttachment(req, res) {
+  if (typeof req.body?.taskId !== "string" || !req.body.taskId.trim()) {
+    return res.status(400).json({ message: "Task ID is required" });
+  }
   if (!req.file) return res.status(400).json({ message: "A supported file is required" });
   try {
     const access = await findAccessibleTask(req.body.taskId, req.user.id);
