@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from 'react'
+import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { api } from '../services/api'
 
 export type User = { id: string; name: string; email: string }
@@ -10,6 +10,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const stored = localStorage.getItem('cloudtask.user')
     return stored ? JSON.parse(stored) as User : null
   })
+  useEffect(() => {
+    if (localStorage.getItem('cloudtask.accessToken')) {
+      api.get('/auth/me').then(({ data }) => {
+        setUser(data.user)
+        localStorage.setItem('cloudtask.user', JSON.stringify(data.user))
+      }).catch(() => {
+        setUser(null)
+        for (const key of ['cloudtask.user', 'cloudtask.accessToken', 'cloudtask.refreshToken']) localStorage.removeItem(key)
+      })
+    }
+  }, [])
   const save = (data: { user: User; accessToken: string; refreshToken: string }) => {
     setUser(data.user)
     localStorage.setItem('cloudtask.user', JSON.stringify(data.user))
@@ -19,6 +30,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = useCallback(async (email: string, password: string) => save((await api.post('/auth/login', { email, password })).data), [])
   const register = useCallback(async (name: string, email: string, password: string) => save((await api.post('/auth/register', { name, email, password })).data), [])
   const logout = useCallback(() => {
+    const refreshToken = localStorage.getItem('cloudtask.refreshToken')
+    if (refreshToken) void api.post('/auth/logout', { refreshToken }).catch(() => {})
     setUser(null)
     for (const key of ['cloudtask.user', 'cloudtask.accessToken', 'cloudtask.refreshToken']) localStorage.removeItem(key)
   }, [])
