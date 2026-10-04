@@ -17,6 +17,8 @@ const subtaskRoutes = require("./routes/subtask.routes");
 const commentRoutes = require("./routes/comment.routes");
 const attachmentRoutes = require("./routes/attachment.routes");
 const path = require("path");
+const notificationRoutes = require("./routes/notification.routes");
+const activityRoutes = require("./routes/activity.routes");
 
 dotenv.config();
 
@@ -43,6 +45,8 @@ app.use("/api/tasks", taskRoutes);
 app.use("/api/subtasks", subtaskRoutes);
 app.use("/api/comments", commentRoutes);
 app.use("/api/attachments", attachmentRoutes);
+app.use("/api/notifications", notificationRoutes);
+app.use("/api/activity", activityRoutes);
 
 const PORT = process.env.PORT || 5000;
 
