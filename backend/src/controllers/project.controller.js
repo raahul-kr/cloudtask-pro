@@ -108,7 +108,24 @@ async function getProjects(req, res) {
   }
 }
 
+async function getProject(req, res) {
+  try {
+    const project = await prisma.project.findFirst({
+      where: { id: req.params.projectId, deletedAt: null },
+      include: { workspace: { select: { id: true, name: true } }, members: { include: { user: { select: { id: true, name: true, email: true } } } } },
+    });
+    if (!project) return res.status(404).json({ message: "Project not found" });
+    const member = await prisma.projectMember.findFirst({ where: { projectId: project.id, userId: req.user.id } });
+    if (!member) return res.status(403).json({ message: "You are not a member of this project" });
+    return res.json({ project });
+  } catch (error) {
+    console.error("Get project error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 module.exports = {
   createProject,
   getProjects,
+  getProject,
 };

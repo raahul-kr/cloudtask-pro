@@ -199,8 +199,26 @@ async function updateTask(req, res) {
   }
 }
 
+async function getTask(req, res) {
+  try {
+    const task = await prisma.task.findFirst({ where: { id: req.params.taskId, deletedAt: null, project: { deletedAt: null } }, include: {
+      creator: { select: { id: true, name: true, email: true } },
+      assignee: { select: { id: true, name: true, email: true } },
+      subtasks: { orderBy: { position: "asc" } },
+    } });
+    if (!task) return res.status(404).json({ message: "Task not found" });
+    const member = await prisma.projectMember.findFirst({ where: { projectId: task.projectId, userId: req.user.id } });
+    if (!member) return res.status(403).json({ message: "You are not a member of this project" });
+    return res.json({ task });
+  } catch (error) {
+    console.error("Get task error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 module.exports = {
   createTask,
   getTasks,
   updateTask,
+  getTask,
 };

@@ -1,122 +1,59 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
+import { useEffect, useState, type FormEvent } from 'react'
+import { BrowserRouter, Link, Navigate, Route, Routes, useNavigate, useParams } from 'react-router-dom'
+import { AuthProvider, useAuth } from './context/AuthContext'
+import { api } from './services/api'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+type Workspace = { id: string; name: string; _count?: { projects: number } }
+type Project = { id: string; name: string; description?: string; tasks?: Task[] }
+type Task = { id: string; title: string; description?: string; status: 'TODO' | 'IN_PROGRESS' | 'DONE'; priority: string; dueDate?: string | null }
 
-  return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
-        </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
-
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
-        </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
-
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+function Protected({ children }: { children: React.ReactNode }) {
+  return localStorage.getItem('cloudtask.accessToken') ? <>{children}</> : <Navigate to="/login" replace />
 }
 
+function Shell({ children }: { children: React.ReactNode }) {
+  const { user, logout } = useAuth()
+  return <div className="shell"><aside className="sidebar"><Link to="/" className="brand"><span className="brand-mark">C</span> CloudTask <b>Pro</b></Link><span className="nav-label">WORKSPACE</span><Link to="/">Overview</Link><Link to="/workspaces">Workspaces</Link><Link to="/notifications">Notifications</Link><div className="side-bottom"><span className="avatar">{user?.name?.[0] || 'U'}</span><div><strong>{user?.name}</strong><small>{user?.email}</small></div><button className="icon-button" onClick={logout} title="Sign out">↗</button></div></aside><main className="main"><header className="topbar"><span>Workspace / <b>Overview</b></span><span className="status-dot">● &nbsp;All systems operational</span></header>{children}</main></div>
+}
+
+function AuthPage({ mode }: { mode: 'login' | 'register' }) {
+  const { login, register, user } = useAuth(); const navigate = useNavigate(); const [error, setError] = useState(''); const [busy, setBusy] = useState(false)
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault(); setError(''); setBusy(true); const values = new FormData(event.currentTarget)
+    try { if (mode === 'login') await login(String(values.get('email')), String(values.get('password'))); else await register(String(values.get('name')), String(values.get('email')), String(values.get('password'))); navigate('/') }
+    catch (e) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not connect to CloudTask API') } finally { setBusy(false) }
+  }
+  if (user) return <Navigate to="/" replace />
+  return <div className="auth-wrap"><div className="auth-card"><Link to="/" className="brand"><span className="brand-mark">C</span> CloudTask <b>Pro</b></Link><p className="eyebrow">YOUR TEAM, IN SYNC</p><h1>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h1><p className="muted">{mode === 'login' ? 'Sign in to pick up where your team left off.' : 'Bring your projects and people together.'}</p><form onSubmit={submit}>{mode === 'register' && <label>Full name<input name="name" autoComplete="name" required placeholder="Your name" /></label>}<label>Email address<input name="email" type="email" autoComplete="email" required placeholder="you@company.com" /></label><label>Password<input name="password" type="password" autoComplete={mode === 'login' ? 'current-password' : 'new-password'} minLength={8} required placeholder="At least 8 characters" /></label>{error && <p className="error">{error}</p>}<button className="primary full" disabled={busy}>{busy ? 'Please wait…' : mode === 'login' ? 'Sign in' : 'Create account'} <span>→</span></button></form><p className="muted centered">{mode === 'login' ? 'New to CloudTask?' : 'Already have an account?'} <Link to={mode === 'login' ? '/register' : '/login'}>{mode === 'login' ? 'Create account' : 'Sign in'}</Link></p></div><div className="auth-aside"><div className="orb orb-a"/><div className="orb orb-b"/><p className="eyebrow">MAKE WORK FLOW</p><h2>Less busywork.<br/>More meaningful<br/><em>momentum.</em></h2><p>Plan projects, track progress, and bring your team along at every step.</p><div className="aside-note">✦ &nbsp; A clearer view of what matters.</div></div></div>
+}
+
+function Dashboard() {
+  const [workspaces, setWorkspaces] = useState<Workspace[]>([]); const [projects, setProjects] = useState<Project[]>([]); const [tasks, setTasks] = useState<Task[]>([]); const [error, setError] = useState(''); const [newName, setNewName] = useState('')
+  useEffect(() => { api.get('/workspaces').then(async ({ data }) => { const spaces: Workspace[] = data.workspaces || []; setWorkspaces(spaces); const lists = await Promise.all(spaces.map(w => api.get(`/projects/workspace/${w.id}`).then(r => r.data.projects as Project[]).catch(() => []))); const all = lists.flat(); setProjects(all); const taskLists = await Promise.all(all.map(p => api.get(`/tasks/project/${p.id}`).then(r => r.data.tasks as Task[]).catch(() => []))); setTasks(taskLists.flat()) }).catch(e => setError(e.response?.data?.message || 'Could not load your workspace. Start the backend and sign in again.')) }, [])
+  async function createWorkspace(e: FormEvent) { e.preventDefault(); if (!newName.trim()) return; try { const { data } = await api.post('/workspaces', { name: newName }); setWorkspaces(v => [data.workspace, ...v]); setNewName('') } catch (e) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not create workspace') } }
+  const stats = [{ label: 'Projects', value: projects.length, tone: 'violet' }, { label: 'To do', value: tasks.filter(t => t.status === 'TODO').length, tone: 'blue' }, { label: 'In progress', value: tasks.filter(t => t.status === 'IN_PROGRESS').length, tone: 'amber' }, { label: 'Completed', value: tasks.filter(t => t.status === 'DONE').length, tone: 'green' }]
+  return <Shell><section className="page-heading"><div><p className="eyebrow">MONDAY, YOUR WORK AT A GLANCE</p><h1>Good to see you <span>✦</span></h1><p className="muted">Here’s what’s happening across your projects.</p></div><button className="primary" onClick={() => document.getElementById('new-workspace')?.focus()}>＋ New workspace</button></section>{error && <div className="notice">{error}</div>}<section className="stat-grid">{stats.map((stat, i) => <article className="stat-card" key={stat.label}><div className={`stat-icon ${stat.tone}`}>{['◫','○','◷','✓'][i]}</div><span className="muted">{stat.label}</span><strong>{stat.value}</strong><small>{i === 0 ? 'Across your teams' : 'Tasks across all projects'}</small></article>)}</section><section className="content-grid"><div className="panel"><div className="panel-head"><div><p className="eyebrow">YOUR TEAMS</p><h2>Workspaces</h2></div><span className="count-pill">{workspaces.length}</span></div><form className="inline-form" onSubmit={createWorkspace}><input id="new-workspace" value={newName} onChange={e => setNewName(e.target.value)} placeholder="Name a workspace…"/><button className="primary" aria-label="Create workspace">＋</button></form>{workspaces.length ? workspaces.map(w => <div className="workspace-row" key={w.id}><div className="workspace-symbol">{w.name[0]?.toUpperCase()}</div><div><strong>{w.name}</strong><small>{w._count?.projects ?? 0} projects</small></div><span className="row-arrow">→</span></div>) : <div className="empty"><div>◇</div><strong>Your first workspace starts here</strong><p>Create a workspace and invite your team to get moving.</p></div>}</div><div className="panel"><div className="panel-head"><div><p className="eyebrow">RECENT ACTIVITY</p><h2>Latest tasks</h2></div><span className="sparkle">✦</span></div>{tasks.slice(0, 6).map(task => <div className="task-row" key={task.id}><span className={`task-check ${task.status === 'DONE' ? 'done' : ''}`}>{task.status === 'DONE' ? '✓' : ''}</span><div><strong>{task.title}</strong><small>{projects.find(p => p.tasks?.some(t => t.id === task.id))?.name || task.status.replace('_', ' ')}</small></div><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority.toLowerCase()}</span></div>)}{!tasks.length && <div className="empty compact"><div>✳</div><strong>Nothing on your plate yet</strong><p>Tasks from your projects will show up here.</p></div>}</div></section><section className="panel project-panel"><div className="panel-head"><div><p className="eyebrow">KEEP THE MOMENTUM</p><h2>Your projects</h2></div><span className="muted">{projects.length} projects</span></div>{projects.length ? <div className="project-grid">{projects.map((project, i) => <Link to={`/projects/${project.id}`} key={project.id} className="project-card"><div className={`project-art art-${i % 4}`}><span>{['◈','✳','⌘','◇'][i % 4]}</span><small>{String(i + 1).padStart(2, '0')}</small></div><h3>{project.name}</h3><p>{project.description || 'A shared space for great work.'}</p><div className="project-meta"><span>{project.tasks?.length ?? 0} tasks</span><span>Open board ↗</span></div></Link>)}</div> : <div className="empty compact"><strong>Projects will appear here</strong><p>Use the project workspace APIs to create your first project.</p></div>}</section></Shell>
+}
+
+function ProjectBoard() {
+  const { projectId = '' } = useParams(); const [project, setProject] = useState<Project | null>(null); const [tasks, setTasks] = useState<Task[]>([]); const [title, setTitle] = useState(''); const [error, setError] = useState('')
+  async function load() { try { const [p, t] = await Promise.all([api.get(`/projects/${projectId}`), api.get(`/tasks/project/${projectId}`)]); setProject(p.data.project); setTasks(t.data.tasks) } catch (e) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not load project') } }
+  // eslint-disable-next-line react-hooks/set-state-in-effect
+  useEffect(() => { void load() }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
+  async function addTask(e: FormEvent) { e.preventDefault(); if (!title.trim()) return; try { await api.post('/tasks', { projectId, title }); setTitle(''); void load() } catch (e) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not create task') } }
+  async function move(task: Task, status: Task['status']) { await api.patch(`/tasks/${task.id}`, { status }); void load() }
+  return <Shell><section className="page-heading"><div><p className="eyebrow"><Link to="/">OVERVIEW</Link> &nbsp; / &nbsp; PROJECT</p><h1>{project?.name || 'Project board'}</h1><p className="muted">{project?.description || 'Keep your team’s work moving forward.'}</p></div><form className="inline-form add-task" onSubmit={addTask}><input value={title} onChange={e => setTitle(e.target.value)} placeholder="Add a task…"/><button className="primary">＋ Add task</button></form></section>{error && <div className="notice">{error}</div>}<div className="board">{(['TODO', 'IN_PROGRESS', 'DONE'] as const).map((status, idx) => <section className="board-column" key={status}><div className="column-head"><span className={`column-dot dot-${idx}`}/><strong>{status.replace('_', ' ')}</strong><span>{tasks.filter(t => t.status === status).length}</span></div>{tasks.filter(t => t.status === status).map(task => <article className="board-task" key={task.id}><div className="task-top"><span className={`priority ${task.priority.toLowerCase()}`}>{task.priority.toLowerCase()}</span><Link to={`/tasks/${task.id}`}>↗</Link></div><h3>{task.title}</h3><p>{task.description || 'No description added.'}</p><div className="task-actions">{status !== 'TODO' && <button onClick={() => void move(task, status === 'DONE' ? 'IN_PROGRESS' : 'TODO')}>←</button>}{status !== 'DONE' && <button onClick={() => void move(task, status === 'TODO' ? 'IN_PROGRESS' : 'DONE')}>Move →</button>}</div></article>)}</section>)}</div></Shell>
+}
+
+function TaskDetail() {
+  const { taskId = '' } = useParams(); const [task, setTask] = useState<Task | null>(null); const [comments, setComments] = useState<{id: string; content: string; user: { name: string }; createdAt: string}[]>([]); const [text, setText] = useState(''); const [error, setError] = useState('')
+  useEffect(() => { api.get(`/tasks/${taskId}`).then(r => { setTask(r.data.task); return api.get(`/comments/task/${taskId}`) }).then(r => setComments(r.data.comments)).catch(e => setError(e.response?.data?.message || 'Could not load task details')) }, [taskId])
+  async function comment(e: FormEvent) { e.preventDefault(); try { await api.post('/comments', { taskId, content: text }); setText(''); const { data } = await api.get(`/comments/task/${taskId}`); setComments(data.comments) } catch (e) { setError((e as { response?: { data?: { message?: string } } }).response?.data?.message || 'Could not add comment') } }
+  return <Shell><section className="page-heading"><div><p className="eyebrow"><Link to="/">OVERVIEW</Link> &nbsp; / &nbsp; TASK</p><h1>{task?.title || 'Task details'}</h1><p className="muted">A closer look at the details and conversation.</p></div></section>{error && <div className="notice">{error}</div>}<div className="detail-grid"><section className="panel"><p className="eyebrow">TASK DETAILS</p><h2>{task?.title}</h2><p className="muted detail-description">{task?.description || 'No description yet. Add context to help your team move forward.'}</p><div className="detail-facts"><div><small>STATUS</small><strong>{task?.status?.replace('_', ' ') || '—'}</strong></div><div><small>PRIORITY</small><strong>{task?.priority || '—'}</strong></div><div><small>DUE DATE</small><strong>{task?.dueDate ? new Date(task.dueDate).toLocaleDateString() : 'No due date'}</strong></div></div><div className="detail-section"><h3>Subtasks</h3><p className="muted">Subtasks are ready to be added from the task API.</p></div></section><section className="panel"><div className="panel-head"><div><p className="eyebrow">TEAM CONVERSATION</p><h2>Comments</h2></div><span className="count-pill">{comments.length}</span></div><form className="comment-form" onSubmit={comment}><textarea value={text} onChange={e => setText(e.target.value)} placeholder="Share an update with your team…" required/><button className="primary">Post comment →</button></form>{comments.map(c => <article className="comment" key={c.id}><span className="avatar small-avatar">{c.user.name[0]}</span><div><strong>{c.user.name}</strong><small>{new Date(c.createdAt).toLocaleString()}</small><p>{c.content}</p></div></article>)}</section></div></Shell>
+}
+
+function Notifications() { const [items, setItems] = useState<{id:string; title:string; message:string; read:boolean; createdAt:string}[]>([]); useEffect(() => { api.get('/notifications').then(r => setItems(r.data.notifications)).catch(() => {}) }, []); return <Shell><section className="page-heading"><div><p className="eyebrow">STAY IN THE LOOP</p><h1>Notifications</h1><p className="muted">Updates from the work you’re part of.</p></div></section><section className="panel notification-list">{items.length ? items.map(n => <article key={n.id} className="notification"><span className={n.read ? 'notification-mark read' : 'notification-mark'}>✦</span><div><strong>{n.title}</strong><p>{n.message}</p><small>{new Date(n.createdAt).toLocaleString()}</small></div></article>) : <div className="empty"><div>✦</div><strong>You're all caught up</strong><p>New team updates will land here.</p></div>}</section></Shell> }
+
+function App() { return <AuthProvider><BrowserRouter><Routes><Route path="/login" element={<AuthPage mode="login"/>}/><Route path="/register" element={<AuthPage mode="register"/>}/><Route path="/" element={<Protected><Dashboard/></Protected>}/><Route path="/workspaces" element={<Protected><Dashboard/></Protected>}/><Route path="/projects/:projectId" element={<Protected><ProjectBoard/></Protected>}/><Route path="/projects/:projectId/tasks" element={<Protected><ProjectBoard/></Protected>}/><Route path="/tasks/:taskId" element={<Protected><TaskDetail/></Protected>}/><Route path="/notifications" element={<Protected><Notifications/></Protected>}/><Route path="*" element={<Navigate to="/" replace/>}/></Routes></BrowserRouter></AuthProvider> }
 export default App
