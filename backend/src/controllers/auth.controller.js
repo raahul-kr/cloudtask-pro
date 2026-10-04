@@ -173,10 +173,30 @@ async function me(req, res) {
   }
 }
 
+async function updateMe(req, res) {
+  try {
+    const { name, avatarUrl } = req.body || {};
+    if (name !== undefined && (typeof name !== "string" || !name.trim())) return res.status(400).json({ message: "Name cannot be empty" });
+    if (avatarUrl !== undefined && avatarUrl !== null) {
+      try { const url = new URL(avatarUrl); if (!["http:", "https:"].includes(url.protocol)) throw new Error("invalid protocol"); }
+      catch { return res.status(400).json({ message: "Avatar URL must be a valid HTTP or HTTPS URL" }); }
+    }
+    const user = await prisma.user.update({ where: { id: req.user.id }, data: {
+      ...(name !== undefined && { name: name.trim() }),
+      ...(avatarUrl !== undefined && { avatarUrl }),
+    }, select: { id: true, name: true, email: true, avatarUrl: true, createdAt: true } });
+    return res.json({ message: "Profile updated successfully", user });
+  } catch (error) {
+    console.error("Update profile error:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+}
+
 module.exports = {
   register,
   login,
   refresh,
   logout,
   me,
+  updateMe,
 };
